@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:jms="http://www.mulesoft.org/schema/mule/jms" xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties"
+	xmlns:sftp="http://www.mulesoft.org/schema/mule/sftp"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/sftp http://www.mulesoft.org/schema/mule/sftp/current/mule-sftp.xsd
+http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd">
+	<global-property doc:name="Global Property" doc:id="6b5c2fe4-9b21-4887-86fd-0319cdced0ab" name="env" value="local" />
+	<configuration-properties doc:name="Configuration properties" doc:id="06bdf00e-93fd-445f-8bac-6003bc6a0817" file="props-${env}.yaml" />
+	<sftp:config name="SFTP_Config" doc:name="SFTP Config" doc:id="3281eebd-9b69-4b92-b7ef-3e58d7569faa" >
+		<sftp:connection host="${sftp.host}" port="${sftp.port}" username="${secure::sftp.username}" password="${secure::sftp.password}" workingDir="${sftp.directory}"/>
+	</sftp:config>
+	<secure-properties:config name="Secure_Properties_Config" doc:name="Secure Properties Config" doc:id="8d3fab90-5551-4c78-8afd-34bef67cff16" file="secured-props-${env}.properties" key="${secure.key}" >
+		<secure-properties:encrypt algorithm="Blowfish" />
+	</secure-properties:config>
+	<jms:config name="JMS_Config" doc:name="JMS Config" doc:id="c9c1b4d5-8804-43a9-9369-b5a68cb0e590" >
+		<jms:active-mq-connection username="${secure::activemq.username}" password="${secure::activemq.username}" >
+			<jms:factory-configuration brokerUrl="${activemq.brokerUrl}" />
+		</jms:active-mq-connection>
+	</jms:config>
+</mule>

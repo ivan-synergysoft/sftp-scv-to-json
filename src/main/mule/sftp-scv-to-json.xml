@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:jms="http://www.mulesoft.org/schema/mule/jms" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:sftp="http://www.mulesoft.org/schema/mule/sftp"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/sftp http://www.mulesoft.org/schema/mule/sftp/current/mule-sftp.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd">
+	<flow name="sftp-scv-to-json.main-flow" doc:id="3d0656da-8e1f-4a49-9f2d-25c6fb7e8813" >
+		<sftp:listener doc:id="da8a07e7-b31e-407c-bafe-746fa27a34fd" config-ref="SFTP_Config">
+			<scheduling-strategy >
+				<fixed-frequency />
+			</scheduling-strategy>
+		</sftp:listener>
+		<set-variable value="#[attributes.fileName]" doc:name="Set Variable fileName" doc:id="b46411c2-44e1-4c5b-840e-eee161a6016e" variableName="fileName"/>
+		<choice doc:name="Choice" doc:id="1d279405-e1ff-4322-8c59-b2cc35cd1d7b" >
+			<when expression='#[vars.fileName startsWith("I")]'>
+				<logger level="DEBUG" doc:name="inventory file" doc:id="16fabaad-0839-4af5-9096-775199b75966" message='#["inventory file: " ++ vars.fileName]' category="file.name"/>
+				<flow-ref doc:name="convert-to-json-subflow" doc:id="227c7231-c5c2-4e5f-b864-b947628ab0fc" name="convert-to-json-subflow"/>
+			</when>
+			<when expression='#[attributes.fileName startsWith("C")]'>
+				<logger level="DEBUG" doc:name="customer file" doc:id="b478fbdd-433e-4e72-9905-eaf40f0d5be0" message='#["customer file: " ++ vars.fileName]' category="file.name"/>
+				<flow-ref doc:name="convert-to-json-subflow" doc:id="5fd31618-eb85-4ed9-8868-26780fe8d1e4" name="convert-to-json-subflow" />
+				<jms:publish doc:name="Publish" doc:id="dabfba15-5ffc-48b1-859b-1c14a04ad48a" config-ref="JMS_Config" destination="queue.mule"/>
+			</when>
+			<otherwise >
+				<logger level="DEBUG" doc:name="skip processing file" doc:id="1b388cbe-13dd-43b2-84be-a20241f5cc02" message='#["skip processing file: " ++ vars.fileName]' category="file.name" />
+			</otherwise>
+		</choice>
+	</flow>
+	<sub-flow name="convert-to-json-subflow" doc:id="57c5ef4c-57de-4389-96b8-9e441acbe2e0" >
+		<ee:transform doc:name="Create executionStart var" doc:id="2bcc3f9e-f401-42c0-a1d6-6de19368bc30" >
+			<ee:variables>
+				<ee:set-variable resource="dw/timer/start.dwl" variableName="executionStart"  />
+			</ee:variables>
+		</ee:transform>
+		<ee:transform doc:name="csv to json" doc:id="478328bc-71f9-462a-af2e-07519bb20278" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<ee:transform doc:name="create executionTime var" doc:id="a3834d4d-504f-41aa-8516-992a50c631f7">
+        	<ee:variables >
+				<ee:set-variable resource="dw/timer/end.dwl" variableName="executionTime"  />
+			</ee:variables>
+        </ee:transform>
+		<logger level="DEBUG" doc:name="execution time" doc:id="46bd8de1-28de-4e0e-a2ec-32f2ae254edc" message='#["execution time: " ++ vars.executionTime as String ++ "ms"]' category="execution.time" />
+	</sub-flow>
+</mule>
