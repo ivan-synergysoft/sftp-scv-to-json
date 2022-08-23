@@ -14,4 +14,4 @@ fun getTimestamp(data) = do{
     parsedDateTime as LocalDateTime {format: "dd-MM-yyyy'T'HH:mm:ss"}
 	}
     ---
-    getTimestamp(attributes.fileName)
+    getTimestamp(payload.attributes.fileName)
