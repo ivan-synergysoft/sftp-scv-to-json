@@ -6,33 +6,33 @@
 http://www.mulesoft.org/schema/mule/sftp http://www.mulesoft.org/schema/mule/sftp/current/mule-sftp.xsd
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
 http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd">
-	<!-- <flow name="sftp-scv-to-json.move-to-processing" doc:id="f34a41d5-4b84-42fe-be88-92c6fb72ef87" >
+	<flow name="sftp-scv-to-json.move-to-processing" doc:id="f34a41d5-4b84-42fe-be88-92c6fb72ef87" >
 		<scheduler doc:name="Scheduler" doc:id="03e902e6-c72b-4a8e-99ce-73dd33437399" >
 			<scheduling-strategy >
 				<fixed-frequency />
 			</scheduling-strategy>
 		</scheduler>
-		<sftp:list doc:name="List" doc:id="73c44e4a-4871-42f2-b44b-16fa1dd20925" config-ref="SFTP_Config" directoryPath="${sftp.directory}">
+		<sftp:list doc:name="List" doc:id="73c44e4a-4871-42f2-b44b-16fa1dd20925" config-ref="SFTP_Config" directoryPath="${sftp.newDirectory}">
 			<sftp:matcher filenamePattern="regex:^[CI].*"/>
 		</sftp:list>
-		<logger level="INFO" doc:name="Logger" doc:id="bb9745d2-c016-440d-a90d-5fb6e2e46006" message="#[output application/json -&#45;&#45; payload]"/>
+		<logger level="DEBUG" doc:name="Logger" doc:id="bb9745d2-c016-440d-a90d-5fb6e2e46006" message="#[output application/json --- payload default {}]" category="file.name"/>
 		<parallel-foreach doc:name="Parallel For Each" doc:id="66982adb-ac50-4f4d-b532-168767ee69be" >
-			<sftp:move doc:name="Move to /processing" doc:id="68c5db81-1185-49aa-88ef-65baa38f0550" config-ref="SFTP_Config" sourcePath="#[p('sftp.directory') ++ &quot;/&quot; ++ payload.attributes.name]" targetPath="#[p('sftp.processingDirectory')]"/>
+			<sftp:move doc:name="Move to /processing" doc:id="68c5db81-1185-49aa-88ef-65baa38f0550" config-ref="SFTP_Config" sourcePath="#[p('sftp.newDirectory') ++ payload.attributes.name]" targetPath="#[p('sftp.processingDirectory')]"/>
 		</parallel-foreach>
-		<foreach doc:name="For Each" doc:id="5b1de034-19df-411d-8c84-2758c12d63cb" >
+		<!-- <foreach doc:name="For Each" doc:id="5b1de034-19df-411d-8c84-2758c12d63cb" >
 			<sftp:move doc:name="Move to /processing" doc:id="49be11f8-d8b8-4f27-b7f4-96bb100e74f3" config-ref="SFTP_Config" sourcePath="#[p('sftp.directory') ++ &quot;/&quot; ++ attributes.name]" targetPath="#[p('sftp.processingDirectory')]"/>
-		</foreach>
-	</flow> -->
-	<!-- <flow name="sftp-scv-to-json.customer-processing" doc:id="cdfab44a-1287-4cb6-aeed-997a116a90fe" >
+		</foreach> -->
+	</flow>
+	<flow name="sftp-scv-to-json.customer-processing" doc:id="cdfab44a-1287-4cb6-aeed-997a116a90fe" >
 		<scheduler doc:name="Scheduler" doc:id="7b474201-eb64-4627-bf06-eb98e45ae6e7" >
 			<scheduling-strategy >
-				<fixed-frequency />
+				<fixed-frequency frequency="5" timeUnit="MINUTES"/>
 			</scheduling-strategy>
 		</scheduler>
 		<sftp:list doc:name="List" doc:id="9810c094-901a-4c07-bf2b-dd10cf3beaca" config-ref="SFTP_Config" directoryPath="${sftp.processingDirectory}">
 			<sftp:matcher filenamePattern="regex:^C.*"/>
 		</sftp:list>
-		<logger level="INFO" doc:name="Logger" doc:id="702747ee-c130-40d3-bdb9-f50dc6fc8bad" message="#[output application/json -&#45;&#45; payload]"/>
+		<logger level="DEBUG" doc:name="Logger" doc:id="702747ee-c130-40d3-bdb9-f50dc6fc8bad" message="#[output application/json --- payload]" category="file.name"/>
 		<ee:transform doc:name="sort by file name" doc:id="37905806-8c47-4042-b3eb-cffe5bd887a2">
 			<ee:message >
 				<ee:set-payload resource="dw/sftp-csv-to-json/sortByFileName.dwl"/>
@@ -40,9 +40,9 @@ http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/
 		</ee:transform>
 		<foreach doc:name="For Each file" doc:id="6a0a8c94-aa10-4d01-af0b-086f7dc6f756" collection="payload">
 			<flow-ref doc:name="sftp-scv-to-json.convert-to-json" doc:id="a1e61598-8334-4af2-ac91-63783aa58589" name="sftp-scv-to-json.convert-to-json" target="jsonData"/>
-			<sftp:move doc:name="Move to /archived" doc:id="a90ef361-8ab8-4833-b399-90eadc235e79" config-ref="SFTP_Config" sourcePath="#[p('sftp.processingDirectory') ++ &quot;/&quot; ++ attributes.name]" targetPath="#[p('sftp.archivedDirectory')]"/>
+			<sftp:move doc:name="Move to /archived" doc:id="a90ef361-8ab8-4833-b399-90eadc235e79" config-ref="SFTP_Config" sourcePath="#[p('sftp.processingDirectory') ++ attributes.name]" targetPath="#[p('sftp.archivedDirectory')]"/>
 		</foreach>
-	</flow> -->
+	</flow>
 	<flow name="sftp-scv-to-json.inventory-processing" doc:id="2d83715e-9148-4358-adee-d8ed373391ec" >
 		<scheduler doc:name="Scheduler" doc:id="49e2a78f-684e-4a53-8552-74c7786f832d" >
 			<scheduling-strategy >
@@ -60,7 +60,7 @@ http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/
 		</ee:transform>
 		<foreach doc:name="For Each file" doc:id="4648a616-f030-4fbe-bdf8-ad7453e2af99" collection="payload">
 			<flow-ref doc:name="sftp-scv-to-json.convert-to-json" doc:id="737be7d7-11c1-4286-82f9-29c100325ce2" name="sftp-scv-to-json.convert-to-json" target="jsonData"/>
-			<sftp:move doc:name="Move to /archived" doc:id="9f0ab8b5-2af7-4642-af29-245bbfc74427" config-ref="SFTP_Config" sourcePath="#[p('sftp.processingDirectory') ++ &quot;/&quot; ++ attributes.name]" targetPath="#[p('sftp.archivedDirectory')]">
+			<sftp:move doc:name="Move to /archived" doc:id="9f0ab8b5-2af7-4642-af29-245bbfc74427" config-ref="SFTP_Config" sourcePath="#[p('sftp.processingDirectory') ++ attributes.name]" targetPath="#[p('sftp.archivedDirectory')]">
 				<reconnect count="3" />
 			</sftp:move>
 			<jms:publish doc:name="Publish JSON to queue.mule" doc:id="9759efe6-6ff4-4410-8412-2fd73ee65009" config-ref="JMS_Config" destination="queue.mule" >
