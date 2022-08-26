@@ -26,8 +26,8 @@
         <!-- Mule logger -->
         <AsyncLogger name="org.mule.runtime.core.internal.processor.LoggerMessageProcessor" level="INFO"/>
         
-        <AsyncLogger name="file.name" level="DEBUG"/>
-        <AsyncLogger name="execution.time" level="DEBUG"/>
+        <AsyncLogger name="file.name" level="OFF"/>
+        <AsyncLogger name="execution.time" level="INFO" />
         
          <!-- <AsyncLogger name="org.mule.extension.sftp" level="DEBUG"/>
          <AsyncLogger name="com.jcraft" level="DEBUG"/> -->
