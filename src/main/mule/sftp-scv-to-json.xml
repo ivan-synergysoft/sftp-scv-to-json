@@ -6,6 +6,10 @@
 http://www.mulesoft.org/schema/mule/sftp http://www.mulesoft.org/schema/mule/sftp/current/mule-sftp.xsd
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
 http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd">
+	<sub-flow name="move-duplicate" doc:id="20def575-fda8-4a4c-9b70-63d28f8f237f" >
+		<set-variable value='#[%dw 2.0&#10;import * from dw::core::Strings&#10;output application/java&#10;---&#10;(substringBefore(attributes.fileName, ".") ++ now() as String {format: "_dd_MM_YYYY_hh_mm_ss_SSS"} ++ ".csv") as String]' doc:name="duplicateFileName" doc:id="087f5163-00b0-43de-923d-cff7012aea21" variableName="duplicateFileName" />
+		<sftp:move doc:name="Move to /archived" doc:id="976042c1-7bf0-4aca-9a65-594cbc8df55f" config-ref="SFTP_Config" sourcePath="#[p('sftp.processingDirectory') ++ attributes.name]" targetPath="#[p('sftp.archivedDirectory')]" renameTo="#[vars.duplicateFileName]" />
+	</sub-flow>
 	<flow name="sftp-scv-to-json.move-to-processing" doc:id="f34a41d5-4b84-42fe-be88-92c6fb72ef87" >
 		<scheduler doc:name="Scheduler" doc:id="03e902e6-c72b-4a8e-99ce-73dd33437399" >
 			<scheduling-strategy >
@@ -44,8 +48,7 @@ http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/
 		</foreach>
 		<error-handler >
 			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="1494086b-bd90-4ca6-8c4e-289d89d1416b" type="SFTP:FILE_ALREADY_EXISTS">
-				<set-variable value='#[%dw 2.0&#10;import * from dw::core::Strings&#10;output application/java&#10;---&#10;(substringBefore(attributes.fileName, ".") ++ now() as String {format: "_dd_MM_YYYY_hh_mm_ss_SSS"} ++ ".csv") as String]' doc:name="duplicateFileName" doc:id="087f5163-00b0-43de-923d-cff7012aea21" variableName="duplicateFileName"/>
-				<sftp:move doc:name="Move to /archived" doc:id="976042c1-7bf0-4aca-9a65-594cbc8df55f" config-ref="SFTP_Config" sourcePath="#[p('sftp.processingDirectory') ++ attributes.name]" targetPath="#[p('sftp.archivedDirectory')]" renameTo='#[vars.duplicateFileName]'/>
+				<flow-ref doc:name="move-duplicate" doc:id="15c51973-626b-4550-b205-1d4cbef39112" name="move-duplicate" />
 			</on-error-continue>
 		</error-handler>
 	
@@ -76,6 +79,11 @@ http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/
 				</jms:message>
 			</jms:publish>
 		</foreach>
+		<error-handler >
+			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="988cbe2d-9a81-430e-b20d-439332e86c29" type="SFTP:FILE_ALREADY_EXISTS">
+				<flow-ref doc:name="move-duplicate" doc:id="e8b4bccd-0070-4c5e-b12d-695207a17835" name="move-duplicate" />
+			</on-error-continue>
+		</error-handler>
 	</flow>
 	<sub-flow name="sftp-scv-to-json.convert-to-json" doc:id="57c5ef4c-57de-4389-96b8-9e441acbe2e0" >
 		<ee:transform doc:name="Create executionStart var" doc:id="2bcc3f9e-f401-42c0-a1d6-6de19368bc30" >
