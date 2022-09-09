@@ -42,7 +42,14 @@ http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/
 			<flow-ref doc:name="sftp-scv-to-json.convert-to-json" doc:id="a1e61598-8334-4af2-ac91-63783aa58589" name="sftp-scv-to-json.convert-to-json" target="jsonData"/>
 			<sftp:move doc:name="Move to /archived" doc:id="a90ef361-8ab8-4833-b399-90eadc235e79" config-ref="SFTP_Config" sourcePath="#[p('sftp.processingDirectory') ++ attributes.name]" targetPath="#[p('sftp.archivedDirectory')]"/>
 		</foreach>
-	</flow>
+		<error-handler >
+			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="1494086b-bd90-4ca6-8c4e-289d89d1416b" type="SFTP:FILE_ALREADY_EXISTS">
+				<set-variable value='#[%dw 2.0&#10;import * from dw::core::Strings&#10;output application/java&#10;---&#10;(substringBefore(attributes.fileName, ".") ++ now() as String {format: "_dd_MM_YYYY_hh_mm_ss_SSS"} ++ ".csv") as String]' doc:name="duplicateFileName" doc:id="087f5163-00b0-43de-923d-cff7012aea21" variableName="duplicateFileName"/>
+				<sftp:move doc:name="Move to /archived" doc:id="976042c1-7bf0-4aca-9a65-594cbc8df55f" config-ref="SFTP_Config" sourcePath="#[p('sftp.processingDirectory') ++ attributes.name]" targetPath="#[p('sftp.archivedDirectory')]" renameTo='#[vars.duplicateFileName]'/>
+			</on-error-continue>
+		</error-handler>
+	
+</flow>
 	<flow name="sftp-scv-to-json.inventory-processing" doc:id="2d83715e-9148-4358-adee-d8ed373391ec" >
 		<scheduler doc:name="Scheduler" doc:id="49e2a78f-684e-4a53-8552-74c7786f832d" >
 			<scheduling-strategy >
@@ -89,6 +96,6 @@ payload]]></ee:set-payload>
 				<ee:set-variable resource="dw/timer/end.dwl" variableName="executionTime"  />
 			</ee:variables>
         </ee:transform>
-		<logger level="DEBUG" doc:name="execution time" doc:id="46bd8de1-28de-4e0e-a2ec-32f2ae254edc" message='#["execution time: " ++ vars.executionTime as String ++ "ms"]' category="execution.time" />
+		<logger level="INFO" doc:name="execution time" doc:id="46bd8de1-28de-4e0e-a2ec-32f2ae254edc" message='#["execution time: " ++ vars.executionTime as String ++ "ms"]' category="execution.time" />
 	</sub-flow>
 </mule>
