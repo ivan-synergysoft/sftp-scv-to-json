@@ -6,8 +6,11 @@
 http://www.mulesoft.org/schema/mule/sftp http://www.mulesoft.org/schema/mule/sftp/current/mule-sftp.xsd
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
 http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd">
+	<sub-flow name="move-to-archived" doc:id="fb9cc5c8-a48f-4ffe-8410-f6ea3ae9e948" >
+		<sftp:move doc:name="Move to /archived" doc:id="a90ef361-8ab8-4833-b399-90eadc235e79" config-ref="SFTP_Config" sourcePath="#[p('sftp.processingDirectory') ++ attributes.name]" targetPath="#[p('sftp.archivedDirectory')]" />
+	</sub-flow>
 	<sub-flow name="move-duplicate" doc:id="20def575-fda8-4a4c-9b70-63d28f8f237f" >
-		<set-variable value='#[%dw 2.0&#10;import * from dw::core::Strings&#10;output application/java&#10;---&#10;(substringBefore(attributes.fileName, ".") ++ now() as String {format: "_dd_MM_YYYY_hh_mm_ss_SSS"} ++ ".csv") as String]' doc:name="duplicateFileName" doc:id="087f5163-00b0-43de-923d-cff7012aea21" variableName="duplicateFileName" />
+		<set-variable value='#[%dw 2.0&#10;import * from dw::core::Strings&#10;output application/java&#10;---&#10;(substringBefore(attributes.fileName, ".") ++ now() as String {format: "_dd_MM_YYYY_HH_mm_ss_SSS"} ++ ".csv") as String]' doc:name="duplicateFileName" doc:id="087f5163-00b0-43de-923d-cff7012aea21" variableName="duplicateFileName" />
 		<sftp:move doc:name="Move to /archived" doc:id="976042c1-7bf0-4aca-9a65-594cbc8df55f" config-ref="SFTP_Config" sourcePath="#[p('sftp.processingDirectory') ++ attributes.name]" targetPath="#[p('sftp.archivedDirectory')]" renameTo="#[vars.duplicateFileName]" />
 	</sub-flow>
 	<flow name="sftp-scv-to-json.move-to-processing" doc:id="f34a41d5-4b84-42fe-be88-92c6fb72ef87" >
@@ -44,13 +47,16 @@ http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/
 		</ee:transform>
 		<foreach doc:name="For Each file" doc:id="6a0a8c94-aa10-4d01-af0b-086f7dc6f756" collection="payload">
 			<flow-ref doc:name="sftp-scv-to-json.convert-to-json" doc:id="a1e61598-8334-4af2-ac91-63783aa58589" name="sftp-scv-to-json.convert-to-json" target="jsonData"/>
-			<sftp:move doc:name="Move to /archived" doc:id="a90ef361-8ab8-4833-b399-90eadc235e79" config-ref="SFTP_Config" sourcePath="#[p('sftp.processingDirectory') ++ attributes.name]" targetPath="#[p('sftp.archivedDirectory')]"/>
-		</foreach>
-		<error-handler >
-			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="1494086b-bd90-4ca6-8c4e-289d89d1416b" type="SFTP:FILE_ALREADY_EXISTS">
-				<flow-ref doc:name="move-duplicate" doc:id="15c51973-626b-4550-b205-1d4cbef39112" name="move-duplicate" />
-			</on-error-continue>
-		</error-handler>
+			<try doc:name="Try" doc:id="817c2033-0311-43c6-8687-eb5fc59043f3" >
+				<flow-ref doc:name="move-to-archived" doc:id="008c117f-7cf2-420c-ae3a-dac81a95fe28" name="move-to-archived" />
+				<error-handler >
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="fd54b99f-f8e8-42f7-b83b-e6bda84b7e4a" type="SFTP:FILE_ALREADY_EXISTS" >
+						<flow-ref doc:name="move-duplicate" doc:id="380fb737-c353-440b-80e0-cbbbb042904e" name="move-duplicate" />
+					</on-error-continue>
+				</error-handler>
+			</try>
+		
+</foreach>
 	
 </flow>
 	<flow name="sftp-scv-to-json.inventory-processing" doc:id="2d83715e-9148-4358-adee-d8ed373391ec" >
@@ -70,20 +76,24 @@ http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/
 		</ee:transform>
 		<foreach doc:name="For Each file" doc:id="4648a616-f030-4fbe-bdf8-ad7453e2af99" collection="payload">
 			<flow-ref doc:name="sftp-scv-to-json.convert-to-json" doc:id="737be7d7-11c1-4286-82f9-29c100325ce2" name="sftp-scv-to-json.convert-to-json" target="jsonData"/>
-			<sftp:move doc:name="Move to /archived" doc:id="9f0ab8b5-2af7-4642-af29-245bbfc74427" config-ref="SFTP_Config" sourcePath="#[p('sftp.processingDirectory') ++ attributes.name]" targetPath="#[p('sftp.archivedDirectory')]">
+			<try doc:name="Try" doc:id="41b4c8f2-b77b-441d-8eb0-862da0a920a5" >
+				<flow-ref doc:name="move-to-archived" doc:id="e87703fd-9a3f-4817-afab-1b12dd6f8297" name="move-to-archived" />
+				<error-handler >
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="988cbe2d-9a81-430e-b20d-439332e86c29" type="SFTP:FILE_ALREADY_EXISTS">
+				<flow-ref doc:name="move-duplicate" doc:id="e8b4bccd-0070-4c5e-b12d-695207a17835" name="move-duplicate" />
+			</on-error-continue>
+				</error-handler>
+			</try>
+<!-- [STUDIO:"Move to /archived"]			<sftp:move doc:name="Move to /archived" doc:id="9f0ab8b5-2af7-4642-af29-245bbfc74427" config-ref="SFTP_Config" sourcePath="#[p('sftp.processingDirectory') ++ attributes.name]" targetPath="#[p('sftp.archivedDirectory')]">
 				<reconnect count="3" />
-			</sftp:move>
+			</sftp:move> [STUDIO] -->
 			<jms:publish doc:name="Publish JSON to queue.mule" doc:id="9759efe6-6ff4-4410-8412-2fd73ee65009" config-ref="JMS_Config" destination="queue.mule" >
 				<jms:message >
 					<jms:body ><![CDATA[#[vars.jsonData]]]></jms:body>
 				</jms:message>
 			</jms:publish>
-		</foreach>
-		<error-handler >
-			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="988cbe2d-9a81-430e-b20d-439332e86c29" type="SFTP:FILE_ALREADY_EXISTS">
-				<flow-ref doc:name="move-duplicate" doc:id="e8b4bccd-0070-4c5e-b12d-695207a17835" name="move-duplicate" />
-			</on-error-continue>
-		</error-handler>
+		
+</foreach>
 	</flow>
 	<sub-flow name="sftp-scv-to-json.convert-to-json" doc:id="57c5ef4c-57de-4389-96b8-9e441acbe2e0" >
 		<ee:transform doc:name="Create executionStart var" doc:id="2bcc3f9e-f401-42c0-a1d6-6de19368bc30" >
